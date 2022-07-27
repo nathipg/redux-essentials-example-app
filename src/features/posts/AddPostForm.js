@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
-import { postAdded } from './postsSlice'
+import { addNewPost } from './postsSlice'
+
+import { REQUEST_STATUS } from '../../shared/constants'
 
 export const AddPostForm = () => {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [userId, setUserId] = useState('')
+  const [addRequestStatus, setAddRequestStatus] = useState(REQUEST_STATUS.IDLE);
 
   const dispatch = useDispatch()
 
@@ -16,23 +19,32 @@ export const AddPostForm = () => {
   const onContentChanged = e => setContent(e.target.value)
   const onAuthorChanged = e => setUserId(e.target.value)
 
-  const onSavePostClicked = () => {
-    if(title && content) {
-      const newPost = {
-        title,
-        content,
-        userId,
+  const canSave = [title, content, userId].every(Boolean) && addRequestStatus === REQUEST_STATUS.IDLE;
+
+  const onSavePostClicked = async () => {
+    if(canSave) {
+      try {
+        setAddRequestStatus(REQUEST_STATUS.LOADING);
+
+        const newPost = {
+          title,
+          content,
+          user: userId,
+        };
+
+        await dispatch(addNewPost(newPost)).unwrap();
+
+        setTitle('');
+        setContent('');
+        setUserId('');
+      } catch(err) {
+        console.error('Failed to save the post: ', err);
+      } finally {
+        setAddRequestStatus(REQUEST_STATUS.IDLE);
       }
-
-      dispatch(postAdded(newPost))
-
-      setTitle('')
-      setContent('')
     }
-  }
-
-  const canSave = Boolean(title) && Boolean(content) && Boolean(userId)
-
+  };
+  
   const usersOptions = users.map(user => (
     <option key={user.id} value={user.id}>
       {user.name}
